@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Installer>
+    <Name>mbSoundConvert</Name>
+    <Version>1.0.0</Version>
+    <Title>mbSoundConvert – Setup</Title>
+    <Publisher>Michael Bergmann</Publisher>
+    <ProductUrl>https://github.com/</ProductUrl>
+    <InstallerApplicationIcon>installericon</InstallerApplicationIcon>
+    <InstallerWindowIcon>windowicon.png</InstallerWindowIcon>
+    <Logo>logo.png</Logo>
+    <WizardStyle>Modern</WizardStyle>
+    <StartMenuDir>mbSoundConvert</StartMenuDir>
+    <TargetDir>@ApplicationsDir@/mbSoundConvert</TargetDir>
+    <AdminTargetDir>@ApplicationsDir@/mbSoundConvert</AdminTargetDir>
+    <MaintenanceToolName>mbSoundConvert-Deinstallieren</MaintenanceToolName>
+    <AllowNonAsciiCharacters>true</AllowNonAsciiCharacters>
+    <RemoveTargetDir>true</RemoveTargetDir>
+</Installer>

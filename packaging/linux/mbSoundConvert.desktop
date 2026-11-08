@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=mbSoundConvert
+GenericName=WAV to MP3 Converter
+GenericName[de]=WAV-zu-MP3-Konverter
+Comment=Batch-convert WAV files to MP3 with LAME
+Comment[de]=WAV-Dateien stapelweise mit LAME in MP3 umwandeln
+Exec=mbSoundConvert %F
+Icon=mbSoundConvert
+Terminal=false
+Categories=AudioVideo;Audio;AudioVideoEditing;
+MimeType=audio/x-wav;audio/wav;audio/vnd.wave;
+StartupWMClass=mbSoundConvert
