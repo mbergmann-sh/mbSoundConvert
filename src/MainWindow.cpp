@@ -42,11 +42,6 @@ namespace {
 
 QIcon icon(const char* name) { return QIcon(QStringLiteral(":/icons/%1.png").arg(QLatin1String(name))); }
 
-bool isWavFile(const QString& path) {
-    const QString s = QFileInfo(path).suffix().toLower();
-    return s == QLatin1String("wav") || s == QLatin1String("wave");
-}
-
 QString pathKey(const QString& p) {
 #ifdef Q_OS_WIN
     return QDir::cleanPath(p).toLower();
@@ -483,7 +478,7 @@ void MainWindow::onStartConversion() {
         }
     }
 
-    const QualityPreset& preset = presetById(AppSettings::presetId());
+    const QualityPreset preset = presetById(AppSettings::presetId());
     mbsc::EncoderSettings es;
     es.mode = preset.mode;
     if (preset.mode == mbsc::RateMode::Cbr) es.cbrKbps = preset.value;
@@ -742,7 +737,7 @@ void MainWindow::updateUiState() {
 }
 
 void MainWindow::refreshStatusInfo() {
-    const QualityPreset& p = presetById(AppSettings::presetId());
+    const QualityPreset p = presetById(AppSettings::presetId());
     const QString mode = p.mode == mbsc::RateMode::Cbr ? tr("CBR %1 kbit/s").arg(p.value) : tr("VBR V%1").arg(p.value);
     const QString target = AppSettings::targetSameAsSource() ? tr("Ordner der Quelldatei")
                                                              : QDir::toNativeSeparators(AppSettings::targetDir());

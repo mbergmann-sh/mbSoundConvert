@@ -12,6 +12,7 @@
 #include <QLabel>
 #include <QPixmap>
 #include <QPlainTextEdit>
+#include <QPushButton>
 #include <QTabWidget>
 #include <QTextBrowser>
 #include <QVBoxLayout>

@@ -16,7 +16,7 @@ struct QualityPreset {
 };
 
 const QList<QualityPreset>& qualityPresets();
-const QualityPreset& presetById(const QString& id);   // unbekannte ID -> Voreinstellung (CBR 320)
+QualityPreset presetById(const QString& id);   // Kopie; unbekannte ID -> Voreinstellung (CBR 320)
 QString defaultPresetId();
 
 enum class OverwritePolicy { Rename = 0, Overwrite = 1, Skip = 2 };

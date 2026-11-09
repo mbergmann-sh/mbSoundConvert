@@ -30,7 +30,7 @@ const QList<QualityPreset>& qualityPresets() {
 
 QString defaultPresetId() { return QStringLiteral("cbr320"); }
 
-const QualityPreset& presetById(const QString& id) {
+QualityPreset presetById(const QString& id) {
     const auto& list = qualityPresets();
     for (const auto& p : list)
         if (p.id == id) return p;
