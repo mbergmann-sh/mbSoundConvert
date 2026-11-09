@@ -67,7 +67,7 @@ AboutDialog::AboutDialog(QWidget* parent) : QDialog(parent) {
            "und einem eingebauten Player zum Probehören.</p>"
            "<p><b>Verwendete Komponenten</b></p>"
            "<ul>"
-           "<li><b>LAME %1</b> – MP3-Encoder (LGPL), fest in das Programm eingebunden</li>"
+           "<li><b>LAME %1</b> – MP3-Encoder (LGPL), eingebunden als <code>mp3lame.dll</code> bzw. fest im Programm</li>"
            "<li><b>Qt %2</b> – Oberfläche und Audiowiedergabe (LGPL v3)</li>"
            "</ul>"
            "<p><b>Lizenz</b><br>"

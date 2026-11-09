@@ -11,11 +11,12 @@ licensed separately:
   the output of `./configure`.
 * License: GNU Library General Public License (LGPL) version 2 or later – full
   text in `third_party/lame/COPYING`, usage notes in `third_party/lame/LICENSE`.
-* mbSoundConvert links LAME **statically**. Because the complete source code of
-  mbSoundConvert is public (MIT), anybody can rebuild the program with a
-  modified LAME (`qmake6 CONFIG+=release`), which satisfies the LGPL relinking
-  requirement. If you redistribute a closed-source derivative, link LAME
-  dynamically (`CONFIG+=system_lame`) or provide the object files.
+* **Windows/MinGW builds use LAME as a separate DLL (`mp3lame.dll`)**, which can be replaced by the user
+  with a modified build of the same sources (`qmake6 CONFIG+=release` rebuilds it) – this satisfies the LGPL.
+  MSVC builds and `CONFIG+=lame_static` link LAME statically instead; since the complete source code of
+  mbSoundConvert is public (MIT), the program can be relinked with a modified LAME. If you redistribute a
+  closed-source derivative, ship LAME as DLL/shared library (default on MinGW, `CONFIG+=lame_shared` on Linux)
+  or provide the object files.
 * Note: LAME may be covered by software patents in some jurisdictions; the
   relevant MP3 patents have expired in most countries. See `third_party/lame/README`.
 

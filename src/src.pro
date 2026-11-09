@@ -48,6 +48,32 @@ win32 {
     QMAKE_TARGET_DESCRIPTION = "mbSoundConvert - WAV to MP3 batch converter"
     QMAKE_TARGET_COPYRIGHT = "Copyright (c) 2026 Michael Bergmann (MIT License)"
     RC_LANG = 0x0407
+
+    # ---- Deploy-Schritt nach jedem Link: windeployqt + LAME-DLL + MinGW-Laufzeit -----------
+    # Ergebnis: <build>/deploy  = fertiger Ordner (nur .exe + DLLs + Plugins + Lizenztexte),
+    # genau diesen Ordner packt spaeter der Installer. Abschalten: CONFIG+=no_deploy
+    !no_deploy {
+        WINDEPLOYQT = $$[QT_INSTALL_BINS]/windeployqt.exe
+        !exists($$WINDEPLOYQT): WINDEPLOYQT = $$[QT_INSTALL_BINS]/windeployqt6.exe
+
+        win32-g++*: DEPLOY_COMPILER = mingw
+        else:       DEPLOY_COMPILER = msvc
+
+        lame_shared: DEPLOY_LAMEDIR = $$OUT_PWD/../bin   # hier liegt mp3lame.dll (DLLDESTDIR)
+        else:        DEPLOY_LAMEDIR = none
+
+        DEPLOY_EXE  = $$shell_path($$OUT_PWD/../bin/$${TARGET}.exe)
+        DEPLOY_DIR  = $$shell_path($$OUT_PWD/../deploy)
+
+        QMAKE_POST_LINK += $$shell_quote($$shell_path($$PWD/../scripts/deploy_windows.bat)) \
+            $$shell_quote($$DEPLOY_EXE) \
+            $$shell_quote($$DEPLOY_DIR) \
+            $$shell_quote($$shell_path($$WINDEPLOYQT)) \
+            $$DEPLOY_COMPILER \
+            $$shell_quote($$shell_path($$DEPLOY_LAMEDIR)) \
+            $$shell_quote($$shell_path($$PWD/..)) \
+            $$escape_expand(\n\t)
+    }
 }
 
 # ------------------------------------------------------------------ Linux

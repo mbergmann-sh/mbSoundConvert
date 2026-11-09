@@ -1,7 +1,7 @@
 # Bindet libmp3lame in ein Teilprojekt ein (Header + Bibliothek).
 #
-#   Standard:            mitgelieferte LAME-4.0-Quellen (third_party/lame), als statische
-#                        Bibliothek 'mp3lame' aus dem Teilprojekt lamelib/ (liegt in <build>/lib)
+#   Standard:            mitgelieferte LAME-4.0-Quellen (third_party/lame), gebaut vom Teilprojekt
+#                        lamelib/ (liegt in <build>/lib; als DLL siehe common.pri)
 #   CONFIG+=system_lame: systemweite libmp3lame (Linux: libmp3lame-dev)
 
 system_lame {

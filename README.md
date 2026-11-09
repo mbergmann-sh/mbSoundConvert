@@ -14,7 +14,7 @@
 
 ## Features / Funktionen
 
-* **WAV → MP3** with the LAME encoder (**LAME 4.0 sources are included** and statically linked)
+* **WAV → MP3** with the LAME encoder (**LAME 4.0 sources are included**; built as `mp3lame.dll` with MinGW, statically linked elsewhere)
 * Add files via **multi-select dialog** *or* **multi drag & drop** (files and whole folders, recursive)
 * **Quality presets** (default **CBR 320 kbit/s**): CBR 64–320 kbit/s, VBR V0/V2/V4/V6, plus LAME algorithm quality 0–9
 * **Preferences:** source directory, target directory (or "next to the source file"), what to do if the MP3 exists (rename / overwrite / skip), number of parallel conversions
@@ -43,18 +43,41 @@ mkdir build && cd build
 qmake6 ../mbSoundConvert.pro CONFIG+=release PREFIX=/usr
 make -j$(nproc) && make check && sudo make install
 ```
-`CONFIG+=system_lame` links the system `libmp3lame` instead of the bundled sources.
+`CONFIG+=system_lame` links the system `libmp3lame` instead of the bundled sources; `CONFIG+=lame_shared` builds LAME as `libmp3lame.so` (found via rpath `../lib`).
 
-### Windows
-Install Qt 6 (MinGW or MSVC kit) and, for the installer, the *Qt Installer Framework* via the Qt Maintenance Tool.
+### Windows (Qt 6 + MinGW)
+Install Qt 6 with the **MinGW** kit (and *Qt Installer Framework* for the setup program) via the Qt Maintenance Tool.
+
+**Build step "windeployqt" is part of the normal build.** After every link, qmake runs
+`scripts\deploy_windows.bat` (`QMAKE_POST_LINK` in `src/src.pro`). It creates `build\release\deploy` containing
+
+| copied by the step | what |
+|---|---|
+| `mbSoundConvert.exe` | the program (never object files, `moc_*` or sources) |
+| `mp3lame.dll` | the LAME encoder DLL (built from `third_party/lame`, `lamelib/`) |
+| `Qt6Core.dll`, `Qt6Gui.dll`, `Qt6Widgets.dll`, `Qt6Multimedia.dll` … + `platforms\`, `multimedia\` … | `windeployqt` (incl. FFmpeg for playback) |
+| `libstdc++-6.dll`, `libgcc_s_seh-1.dll`, `libwinpthread-1.dll` | MinGW runtime (taken from `windeployqt`, otherwise from the `g++` directory / `MINGW_BIN`) |
+| `LICENSE.txt`, `THIRD_PARTY_LICENSES.txt` | license texts |
+
+The step fails the build if something essential is missing (e.g. `platforms\qwindows.dll`, the LAME DLL or the MinGW runtime).
+
+```bat
+:: from the "Qt 6.x (MinGW) command prompt" – plain build, deploy folder is created automatically
+mkdir build && cd build
+qmake ..\mbSoundConvert.pro CONFIG+=release
+mingw32-make -j8
+:: -> build\release\bin\mbSoundConvert.exe, mp3lame.dll   and the ready-to-ship folder build\deploy
+```
+Complete pipeline including the installer – the setup is built **only after** the deploy step succeeded and
+contains **only** the content of `build\release\deploy`:
 ```powershell
 .\scripts\build_windows.ps1 -QtDir C:\Qt\6.8.1\mingw_64 -ToolsDir C:\Qt\Tools\mingw1310_64\bin `
                             -IfwDir C:\Qt\Tools\QtInstallerFramework\4.8\bin
 ```
-The script runs **qmake → make → self-test → `windeployqt`** into `dist\mbSoundConvert` and only **then** builds
-`dist\mbSoundConvert-1.0.0-windows-setup.exe` (plus a portable ZIP). It aborts if object files, `moc_*` files or
-source code ended up in the package – the installer contains **only the executable, the Qt/FFmpeg libraries, plugins and license texts**.
-Use `-NoInstaller` to stop after the deploy step.
+Result: `dist\mbSoundConvert-1.0.0-windows-setup.exe` and a portable ZIP. The script verifies the required files and aborts if object
+files, `moc_*` files or source code ended up in the package. Useful switches: `-NoInstaller`, `-Clean`, `-StaticLame`
+(link LAME into the `.exe` instead of using `mp3lame.dll`); qmake switches: `CONFIG+=no_deploy` (skip the deploy step),
+`CONFIG+=lame_static`. With MSVC the LAME library is always linked statically.
 
 ## Project layout
 
@@ -85,6 +108,6 @@ mbSoundConvert wandelt WAV-Dateien stapelweise in MP3 um. Dateien lassen sich pe
 Drag & Drop (Dateien und Ordner) hinzufügen. Die Qualität ist über Stufen einstellbar (Voreinstellung: CBR 320 kbit/s),
 Quell- und Zielverzeichnis legt man in den Voreinstellungen fest. Die WAV-Dateien können im Programm abgespielt,
 pausiert und gestoppt werden. Der MP3-Encoder **LAME 4.0** liegt im Projekt (`third_party/lame`) und wird statisch
-eingebunden. Gebaut wird mit **qmake6**; unter Windows sorgt `windeployqt` vor dem Bau des Installers dafür, dass alle
-Qt-6-Bibliotheken vorhanden sind. Der Installer enthält nur Programm und Bibliotheken – keinen Quellcode und keine
+eingebunden. Gebaut wird mit **qmake6**; unter Windows sorgt `windeployqt` als automatischer Build-Schritt (nach dem Linken) dafür, dass alle
+Qt-6-Bibliotheken, die MinGW-Laufzeit und die LAME-DLL (`mp3lame.dll`) im Ordner `build\deploy` liegen – erst danach wird der Installer gebaut. Der Installer enthält nur Programm und Bibliotheken – keinen Quellcode und keine
 Zwischendateien. Lizenz: **MIT**, © Michael Bergmann 2026.

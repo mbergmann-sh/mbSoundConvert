@@ -4,13 +4,15 @@
   erstellt (optional) den Qt-Installer-Framework-Installer.
 
 .DESCRIPTION
-  Ablauf:  qmake6 -> make -> Staging-Ordner dist\mbSoundConvert (nur .exe)
-           -> windeployqt (kopiert alle benoetigten Qt6-DLLs/Plugins dorthin)
-           -> Pruefung: keine .o/.obj/moc_*/Quelltext im Staging-Ordner
+  Ablauf:  qmake6 -> make (LAME wird bei MinGW als mp3lame.dll gebaut)
+           -> Post-Link-Schritt scripts\deploy_windows.bat (von qmake automatisch ausgefuehrt):
+                .exe + mp3lame.dll + windeployqt (Qt6-DLLs, Plugins, FFmpeg) + MinGW-Laufzeit
+                -> build\release\deploy
+           -> Pruefung: vollstaendig, keine .o/.obj/moc_*/Quelltext im Deploy-Ordner
            -> Portable-ZIP -> Installer (binarycreator)
 
-  Der Installer enthaelt ausschliesslich den Inhalt von dist\mbSoundConvert
-  (Programm + Bibliotheken + Lizenztexte), niemals Build-Zwischendateien oder Quellcode.
+  Der Installer wird erst NACH dem Deploy-Schritt gebaut und enthaelt ausschliesslich den Inhalt
+  von build\release\deploy (Programm + Bibliotheken + Lizenztexte) - nie Zwischendateien oder Quellcode.
 
 .EXAMPLE
   # MinGW-Kit
@@ -25,6 +27,7 @@ param(
     [string]$ToolsDir = "",        # MinGW-bin-Ordner (nur bei MinGW-Kits noetig, falls nicht im PATH)
     [string]$IfwDir = "",          # Qt Installer Framework bin-Ordner (binarycreator.exe)
     [switch]$NoInstaller,          # nur bauen + deployen
+    [switch]$StaticLame,           # LAME fest in die .exe linken (dann gibt es keine mp3lame.dll)
     [switch]$Clean                 # build\ und dist\ vorher loeschen
 )
 
@@ -33,7 +36,7 @@ $Root    = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $Version = "1.0.0"
 $Build   = Join-Path $Root "build\release"
 $Dist    = Join-Path $Root "dist"
-$Stage   = Join-Path $Dist "mbSoundConvert"
+$Stage   = Join-Path $Build "deploy"          # wird vom qmake-Post-Link-Schritt gefuellt
 $PkgData = Join-Path $Root "installer\packages\de.mbsoundconvert.app\data"
 
 function Step($t) { Write-Host "`n=== $t ===" -ForegroundColor Cyan }
@@ -80,7 +83,9 @@ Step "qmake"
 New-Item -ItemType Directory -Force $Build | Out-Null
 Push-Location $Build
 try {
-    Run $qmake @((Join-Path $Root "mbSoundConvert.pro"), "CONFIG+=release")
+    $qargs = @((Join-Path $Root "mbSoundConvert.pro"), "CONFIG+=release")
+    if ($StaticLame) { $qargs += "CONFIG+=lame_static" }
+    Run $qmake $qargs
     Step "Kompilieren ($make)"
     Run $make $makeArgs
 } finally { Pop-Location }
@@ -92,33 +97,45 @@ Step "Selbsttest (WAV -> MP3 mit LAME)"
 $test = Join-Path $Build "bin\test_converter.exe"
 if (Test-Path $test) { Run $test @() } else { Write-Warning "test_converter.exe nicht gebaut - uebersprungen." }
 
-# ---------------------------------------------------------------- Staging + windeployqt
-Step "Staging-Ordner anlegen: $Stage"
-Remove-Item -Recurse -Force $Stage -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Force $Stage | Out-Null
-Copy-Item $exe $Stage                                   # nur die fertige .exe - keine .o/moc-Dateien
-Copy-Item (Join-Path $Root "LICENSE") (Join-Path $Stage "LICENSE.txt")
-Copy-Item (Join-Path $Root "THIRD_PARTY_LICENSES.md") (Join-Path $Stage "THIRD_PARTY_LICENSES.txt")
+# ---------------------------------------------------------------- Deploy-Ordner (windeployqt)
+# Der Ordner entsteht bereits beim Linken (QMAKE_POST_LINK -> scripts\deploy_windows.bat).
+# Fehlt er (z. B. weil mit CONFIG+=no_deploy gebaut wurde), wird der Schritt hier nachgeholt.
+Step "Deploy-Ordner pruefen: $Stage"
+if (-not (Test-Path (Join-Path $Stage "mbSoundConvert.exe"))) {
+    Write-Host "Deploy-Ordner fehlt - fuehre deploy_windows.bat aus ..."
+    $lameDir = if (Test-Path (Join-Path $Build "bin\mp3lame.dll")) { Join-Path $Build "bin" } else { "none" }
+    $comp = if ($spec -match "msvc") { "msvc" } else { "mingw" }
+    & (Join-Path $PSScriptRoot "deploy_windows.bat") $exe $Stage $deploy $comp $lameDir $Root
+    if ($LASTEXITCODE -ne 0) { throw "deploy_windows.bat ist fehlgeschlagen ($LASTEXITCODE)" }
+}
 
-Step "windeployqt: Qt6-Bibliotheken und Plugins kopieren"
-Run $deploy @("--release", "--no-translations", "--no-system-d3d-compiler", "--no-opengl-sw",
-              (Join-Path $Stage "mbSoundConvert.exe"))
+# Pflichtinhalt pruefen, bevor irgendein Paket gebaut wird
+$required = @("mbSoundConvert.exe", "platforms\qwindows.dll", "Qt6Core.dll", "Qt6Gui.dll", "Qt6Widgets.dll", "Qt6Multimedia.dll")
+if (-not $StaticLame -and (Test-Path (Join-Path $Build "bin\mp3lame.dll"))) { $required += "mp3lame.dll" }
+if ($spec -notmatch "msvc") { $required += @("libstdc++-6.dll", "libwinpthread-1.dll") }
+$missing = $required | Where-Object { -not (Test-Path (Join-Path $Stage $_)) }
+if ($missing) { throw "Im Deploy-Ordner fehlen: $($missing -join ', ')" }
+if (-not $StaticLame -and -not (Test-Path (Join-Path $Stage "mp3lame.dll")) -and $spec -notmatch "msvc") {
+    throw "mp3lame.dll fehlt im Deploy-Ordner."
+}
+Write-Host "Pflichtdateien vorhanden:" ($required -join ", ")
 
 # ---------------------------------------------------------------- Sicherheitspruefung
-Step "Pruefe Staging-Ordner (keine Build-Zwischendateien / kein Quellcode)"
+Step "Pruefe Deploy-Ordner (keine Build-Zwischendateien / kein Quellcode)"
 $forbiddenExt  = @(".o", ".obj", ".a", ".lib", ".cpp", ".c", ".h", ".hpp", ".pro", ".pri", ".qrc", ".moc", ".pdb", ".ilk", ".exp")
 $forbidden = Get-ChildItem $Stage -Recurse -File | Where-Object {
     $forbiddenExt -contains $_.Extension.ToLower() -or $_.Name -like "moc_*" -or $_.Name -like "qrc_*" -or $_.Name -like "ui_*"
 }
 if ($forbidden) {
     $forbidden | ForEach-Object { Write-Host "  unerwuenscht: $($_.FullName)" -ForegroundColor Red }
-    throw "Unerwuenschte Dateien im Staging-Ordner - Abbruch."
+    throw "Unerwuenschte Dateien im Deploy-Ordner - Abbruch."
 }
 $files = Get-ChildItem $Stage -Recurse -File
 "{0} Dateien, {1:N1} MB - OK" -f $files.Count, (($files | Measure-Object Length -Sum).Sum / 1MB) | Write-Host
 
 # ---------------------------------------------------------------- Portable ZIP
 Step "Portable-ZIP"
+New-Item -ItemType Directory -Force $Dist | Out-Null
 $zip = Join-Path $Dist "mbSoundConvert-$Version-windows-portable.zip"
 Remove-Item -Force $zip -ErrorAction SilentlyContinue
 Compress-Archive -Path (Join-Path $Stage "*") -DestinationPath $zip

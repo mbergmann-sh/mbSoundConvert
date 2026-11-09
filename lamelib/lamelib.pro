@@ -1,11 +1,26 @@
-# libmp3lame 4.0 als statische Bibliothek (reiner Encoder, ohne autotools)
+# libmp3lame 4.0 (reiner Encoder, ohne autotools)
+#   statisch  (Standard ausser MinGW):  <build>/lib/libmp3lame.a
+#   als DLL   (MinGW / CONFIG+=lame_shared):
+#       <build>/lib/libmp3lame.a  = Import-Bibliothek zum Linken
+#       <build>/bin/mp3lame.dll   = DLL, liegt neben mbSoundConvert.exe (DLLDESTDIR)
 include(../common.pri)
 
 TEMPLATE = lib
 TARGET = mp3lame
-CONFIG += staticlib c99 warn_off
+CONFIG += c99 warn_off
 CONFIG -= qt
 DESTDIR = $$OUT_PWD/../lib
+
+lame_shared {
+    CONFIG += dll
+    CONFIG -= staticlib
+    # Windows: die DLL zusaetzlich nach <build>/bin kopieren (dort liegen .exe und Selbsttest)
+    win32: DLLDESTDIR = $$OUT_PWD/../bin
+    # MinGW exportiert ohne __declspec(dllexport) automatisch alle Symbole
+    win32-g++*: QMAKE_LFLAGS += -Wl,--export-all-symbols
+} else {
+    CONFIG += staticlib
+}
 
 LAME = $$PWD/../third_party/lame
 

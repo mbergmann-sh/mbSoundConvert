@@ -38,7 +38,7 @@ want_lib() {   # 0 = mitliefern
     case "$path" in "$QT_LIBS"/*) return 0 ;; esac
     case "$base" in
         libQt6*|libicu*|libavcodec*|libavformat*|libavutil*|libavfilter*|libavdevice*|libswresample*|libswscale*) return 0 ;;
-        libdouble-conversion*|libb2.so*|libpcre2-16*|libmd4c*) return 0 ;;
+        libdouble-conversion*|libb2.so*|libpcre2-16*|libmd4c*|libmp3lame*) return 0 ;;
     esac
     return 1
 }
