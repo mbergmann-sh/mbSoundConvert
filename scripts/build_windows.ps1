@@ -85,6 +85,7 @@ Push-Location $Build
 try {
     $qargs = @((Join-Path $Root "mbSoundConvert.pro"), "CONFIG+=release")
     if ($StaticLame) { $qargs += "CONFIG+=lame_static" }
+    if ($NoInstaller) { $qargs += "CONFIG+=no_installer" }
     Run $qmake $qargs
     Step "Kompilieren ($make)"
     Run $make $makeArgs
@@ -142,18 +143,15 @@ Compress-Archive -Path (Join-Path $Stage "*") -DestinationPath $zip
 Write-Host $zip
 
 # ---------------------------------------------------------------- Installer
+# Der Installer wird bereits beim Bauen erzeugt (QMAKE_POST_LINK -> scripts\make_installer_windows.bat),
+# und zwar erst nach dem Deploy-Schritt. Hier wird nur noch geprueft und nach dist\ kopiert.
 if ($NoInstaller) { Write-Host "`nFertig (ohne Installer)." -ForegroundColor Green; return }
 
-$bc = Find-Tool @("binarycreator")
-if (-not $bc) { throw "binarycreator.exe nicht gefunden (Qt Installer Framework). Bitte -IfwDir angeben, z. B. C:\Qt\Tools\QtInstallerFramework\4.8\bin" }
-
-Step "Installer-Paket befuellen (nur Programm + Bibliotheken)"
-New-Item -ItemType Directory -Force $PkgData | Out-Null
-Get-ChildItem $PkgData -Force | Where-Object { $_.Name -ne ".gitkeep" } | Remove-Item -Recurse -Force
-Copy-Item (Join-Path $Stage "*") $PkgData -Recurse
-
-Step "binarycreator"
-$setup = Join-Path $Dist "mbSoundConvert-$Version-windows-setup.exe"
-Run $bc @("--offline-only", "-c", (Join-Path $Root "installer\config\config.xml"),
-          "-p", (Join-Path $Root "installer\packages"), $setup)
+$setupName = "mbSoundConvertSetup_IFW.exe"
+$setup = Join-Path $Root "installer\output\$setupName"
+if (-not (Test-Path $setup)) {
+    throw "Installer nicht erzeugt: $setup`nbinarycreator.exe (Qt Installer Framework) nicht gefunden? -IfwDir angeben, z. B. C:\Qt\Tools\QtInstallerFramework\4.8\bin"
+}
+Copy-Item $setup (Join-Path $Dist "mbSoundConvert-$Version-windows-setup.exe") -Force
 Write-Host "`nInstaller: $setup" -ForegroundColor Green
+Write-Host "Kopie:     $(Join-Path $Dist "mbSoundConvert-$Version-windows-setup.exe")"

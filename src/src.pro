@@ -51,7 +51,7 @@ win32 {
 
     # ---- Deploy-Schritt nach jedem Link: windeployqt + LAME-DLL + MinGW-Laufzeit -----------
     # Ergebnis: <build>/deploy  = fertiger Ordner (nur .exe + DLLs + Plugins + Lizenztexte),
-    # genau diesen Ordner packt spaeter der Installer. Abschalten: CONFIG+=no_deploy
+    # genau diesen Ordner packt anschliessend der Installer. Abschalten: CONFIG+=no_deploy
     !no_deploy {
         WINDEPLOYQT = $$[QT_INSTALL_BINS]/windeployqt.exe
         !exists($$WINDEPLOYQT): WINDEPLOYQT = $$[QT_INSTALL_BINS]/windeployqt6.exe
@@ -61,6 +61,9 @@ win32 {
 
         lame_shared: DEPLOY_LAMEDIR = $$OUT_PWD/../bin   # hier liegt mp3lame.dll (DLLDESTDIR)
         else:        DEPLOY_LAMEDIR = none
+
+        CONFIG(debug, debug|release): DEPLOY_BUILDTYPE = debug
+        else:                         DEPLOY_BUILDTYPE = release
 
         DEPLOY_EXE  = $$shell_path($$OUT_PWD/../bin/$${TARGET}.exe)
         DEPLOY_DIR  = $$shell_path($$OUT_PWD/../deploy)
@@ -72,7 +75,25 @@ win32 {
             $$DEPLOY_COMPILER \
             $$shell_quote($$shell_path($$DEPLOY_LAMEDIR)) \
             $$shell_quote($$shell_path($$PWD/..)) \
+            $$DEPLOY_BUILDTYPE \
             $$escape_expand(\n\t)
+
+        # ---- Installer (Qt Installer Framework) direkt hinter dem Deploy-Schritt -------------
+        # Ergebnis:  <Projekt>\installer\output\mbSoundConvertSetup_IFW.exe       (Release)
+        #            <Projekt>\installer\output\mbSoundConvertSetup_IFW_debug.exe (Debug)
+        # Abschalten: CONFIG+=no_installer   (dauert pro Link ca. 10-60 s, je nach Rechner)
+        # binarycreator wird ueber IFW_DIR, den PATH oder <Qt>\Tools\QtInstallerFramework gefunden.
+        !no_installer {
+            INSTALLER_NAME = mbSoundConvertSetup_IFW.exe
+            CONFIG(debug, debug|release): INSTALLER_NAME = mbSoundConvertSetup_IFW_debug.exe
+
+            QMAKE_POST_LINK += $$shell_quote($$shell_path($$PWD/../scripts/make_installer_windows.bat)) \
+                $$shell_quote($$DEPLOY_DIR) \
+                $$shell_quote($$shell_path($$PWD/..)) \
+                $$shell_quote($$shell_path($$[QT_INSTALL_BINS])) \
+                $$INSTALLER_NAME \
+                $$escape_expand(\n\t)
+        }
     }
 }
 

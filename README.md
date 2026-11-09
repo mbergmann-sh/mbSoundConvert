@@ -62,22 +62,33 @@ Install Qt 6 with the **MinGW** kit (and *Qt Installer Framework* for the setup 
 The step fails the build if something essential is missing (e.g. `platforms\qwindows.dll`, the LAME DLL or the MinGW runtime).
 
 ```bat
-:: from the "Qt 6.x (MinGW) command prompt" – plain build, deploy folder is created automatically
+:: from the "Qt 6.x (MinGW) command prompt" (or simply "Build" in Qt Creator)
 mkdir build && cd build
 qmake ..\mbSoundConvert.pro CONFIG+=release
 mingw32-make -j8
-:: -> build\release\bin\mbSoundConvert.exe, mp3lame.dll   and the ready-to-ship folder build\deploy
 ```
-Complete pipeline including the installer – the setup is built **only after** the deploy step succeeded and
-contains **only** the content of `build\release\deploy`:
+**The normal build now produces everything – no extra script needed:**
+
+| result | location |
+|---|---|
+| program + `mp3lame.dll` | `build\release\bin\` |
+| ready-to-ship folder (exe, Qt/MinGW/LAME DLLs, plugins) – created by `windeployqt` | `build\release\deploy\` |
+| **setup program** (Qt Installer Framework) | **`installer\output\mbSoundConvertSetup_IFW.exe`** (Debug builds: `…_IFW_debug.exe`) |
+
+The installer step runs **after** the deploy step succeeded and packs **only** the content of `deploy\` (no source code, no `.o`/`moc_*` files –
+it refuses to build otherwise). `binarycreator.exe` is found via the environment variable `IFW_DIR` (e.g. `D:\Qt\Tools\QtInstallerFramework\4.8`),
+the `PATH`, or automatically in `<Qt>\Tools\QtInstallerFramework\*\bin`. If it cannot be found, the build still succeeds and prints
+`[installer] UEBERSPRUNGEN …` with instructions (in Qt Creator: *Projects → Build → Build Environment → add `IFW_DIR`*).
+Packing the installer takes some seconds per link; switch it off with `CONFIG+=no_installer`.
+
+`scripts\build_windows.ps1` runs the same build plus the self-test and additionally creates a portable ZIP and a copy of the setup in `dist\`:
 ```powershell
 .\scripts\build_windows.ps1 -QtDir C:\Qt\6.8.1\mingw_64 -ToolsDir C:\Qt\Tools\mingw1310_64\bin `
                             -IfwDir C:\Qt\Tools\QtInstallerFramework\4.8\bin
 ```
-Result: `dist\mbSoundConvert-1.0.0-windows-setup.exe` and a portable ZIP. The script verifies the required files and aborts if object
-files, `moc_*` files or source code ended up in the package. Useful switches: `-NoInstaller`, `-Clean`, `-StaticLame`
-(link LAME into the `.exe` instead of using `mp3lame.dll`); qmake switches: `CONFIG+=no_deploy` (skip the deploy step),
-`CONFIG+=lame_static`. With MSVC the LAME library is always linked statically.
+Useful switches: `-NoInstaller`, `-Clean`, `-StaticLame` (link LAME into the `.exe` instead of using `mp3lame.dll`); qmake switches:
+`CONFIG+=no_deploy`, `CONFIG+=no_installer`, `CONFIG+=lame_static`. With MSVC the LAME library is always linked statically.
+The scripts can also be run by hand: `scripts\deploy_windows.bat`, `scripts\make_installer_windows.bat`.
 
 ## Project layout
 
@@ -109,5 +120,5 @@ Drag & Drop (Dateien und Ordner) hinzufügen. Die Qualität ist über Stufen ein
 Quell- und Zielverzeichnis legt man in den Voreinstellungen fest. Die WAV-Dateien können im Programm abgespielt,
 pausiert und gestoppt werden. Der MP3-Encoder **LAME 4.0** liegt im Projekt (`third_party/lame`) und wird statisch
 eingebunden. Gebaut wird mit **qmake6**; unter Windows sorgt `windeployqt` als automatischer Build-Schritt (nach dem Linken) dafür, dass alle
-Qt-6-Bibliotheken, die MinGW-Laufzeit und die LAME-DLL (`mp3lame.dll`) im Ordner `build\deploy` liegen – erst danach wird der Installer gebaut. Der Installer enthält nur Programm und Bibliotheken – keinen Quellcode und keine
+Qt-6-Bibliotheken, die MinGW-Laufzeit und die LAME-DLL (`mp3lame.dll`) im Ordner `build\deploy` liegen – erst danach wird der Installer gebaut (`installer\output\mbSoundConvertSetup_IFW.exe`). Der Installer enthält nur Programm und Bibliotheken – keinen Quellcode und keine
 Zwischendateien. Lizenz: **MIT**, © Michael Bergmann 2026.

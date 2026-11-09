@@ -8,7 +8,7 @@ rem  was das Programm zum Laufen braucht - und sonst nichts:
 rem     mbSoundConvert.exe, mp3lame.dll, Qt6*.dll, plugins\*, MinGW-Laufzeit, Lizenzen
 rem
 rem  Aufruf:
-rem     deploy_windows.bat <exe> <deployDir> <windeployqt.exe> <mingw|msvc> <lameDllDir|none> <projectRoot>
+rem     deploy_windows.bat <exe> <deployDir> <windeployqt.exe> <mingw|msvc> <lameDllDir|none> <projectRoot> [release|debug]
 rem
 rem  Hinweis: Bewusst ohne Klammer-Bloecke geschrieben, damit Pfade wie
 rem  "C:\Program Files (x86)\..." die Syntax nicht zerstoeren.
@@ -21,6 +21,8 @@ set "WDQ=%~3"
 set "COMPILER=%~4"
 set "LAMEDIR=%~5"
 set "ROOT=%~6"
+set "BT=%~7"
+if "%BT%"=="" set "BT=release"
 set "ERR="
 
 if "%ROOT%"=="" goto :usage
@@ -49,7 +51,7 @@ echo [deploy] LAME-DLL kopiert
 
 rem ---- 4. windeployqt: Qt6-DLLs, Plugins (platforms, multimedia, ...), FFmpeg ------------------
 echo [deploy] windeployqt ...
-"%WDQ%" --release --no-translations --no-system-d3d-compiler --no-opengl-sw "%DEPLOY%\mbSoundConvert.exe"
+"%WDQ%" --%BT% --no-translations --no-system-d3d-compiler --no-opengl-sw "%DEPLOY%\mbSoundConvert.exe"
 if errorlevel 1 set "ERR=windeployqt ist fehlgeschlagen" & goto :fail
 
 rem ---- 5. MinGW-Laufzeit sicherstellen (falls windeployqt sie nicht gefunden hat) -------------
@@ -67,10 +69,10 @@ goto :fail
 :runtime_done
 
 rem ---- 6. Vollstaendigkeits-Pruefung -----------------------------------------------------------
-if not exist "%DEPLOY%\platforms\qwindows.dll" set "ERR=platforms\qwindows.dll fehlt - das Programm wuerde nicht starten" & goto :fail
-if not exist "%DEPLOY%\Qt6Multimedia.dll" set "ERR=Qt6Multimedia.dll fehlt" & goto :fail
-if exist "%DEPLOY%\multimedia\ffmpegmediaplugin.dll" goto :mm_ok
-if exist "%DEPLOY%\multimedia\windowsmediaplugin.dll" goto :mm_ok
+if not exist "%DEPLOY%\platforms\qwindows*.dll" set "ERR=platforms\qwindows.dll fehlt - das Programm wuerde nicht starten" & goto :fail
+if not exist "%DEPLOY%\Qt6Multimedia*.dll" set "ERR=Qt6Multimedia.dll fehlt" & goto :fail
+if exist "%DEPLOY%\multimedia\ffmpegmediaplugin*.dll" goto :mm_ok
+if exist "%DEPLOY%\multimedia\windowsmediaplugin*.dll" goto :mm_ok
 echo [deploy] WARNUNG: kein Multimedia-Backend-Plugin gefunden - die Wiedergabe wuerde nicht funktionieren.
 :mm_ok
 
@@ -92,5 +94,5 @@ echo [deploy] FEHLER: %ERR%
 exit /b 1
 
 :usage
-echo Aufruf: deploy_windows.bat ^<exe^> ^<deployDir^> ^<windeployqt.exe^> ^<mingw^|msvc^> ^<lameDllDir^|none^> ^<projectRoot^>
+echo Aufruf: deploy_windows.bat ^<exe^> ^<deployDir^> ^<windeployqt.exe^> ^<mingw^|msvc^> ^<lameDllDir^|none^> ^<projectRoot^> [release^|debug]
 exit /b 2
